@@ -12,6 +12,9 @@
 
 (function() {
     'use strict';
+    let previousURL = window.location.href;
+    console.log("start:" + previousURL);
+
     // サイドメニューの目次リストを作成
     const sidebar = document.createElement("div");
     sidebar.style.position = "fixed";
@@ -99,8 +102,15 @@
                 //const promptSelector = "div[data-message-author-role='user']";
                 const promptSelector = ".whitespace-pre-wrap";
                 const prompts = document.querySelectorAll(promptSelector);
-                if (0 < prompts.length && currentLength != prompts.length) {
+                if (0 < prompts.length && currentLength !== prompts.length) {
                     currentLength = prompts.length;
+
+                    // URLが変わった場合は更新し、プロンプトリストを再構築
+                    if (previousURL !== window.location.href) {
+                        previousURL = window.location.href;
+                        console.log("URLが変わりました:", previousURL);
+                    }
+
                     //console.log(prompts);
                     updatePromptList();
                 }
@@ -110,9 +120,34 @@
     observer.observe(document.body, { childList: true, subtree: true });
 
     // URL変更を監視してサイドバーを再構築
+    let isFirstExecution = true; // 初回判定フラグ
     window.addEventListener('popstate', () => {
+        const currentURL = window.location.href;
+        console.log("previous:" + previousURL);
+        console.log("current:" + currentURL);
+
+        // 初回実行時の処理
+        if (isFirstExecution) {
+            console.log("初回のURL変更チェック。");
+            //updatePromptList();
+            isFirstExecution = false; // 初回フラグを解除
+            previousURL = currentURL; // URLを更新
+            return true;
+        }
+
+        // ハッシュ部分のみの変更かどうかを確認
+        const currentHash = currentURL.split('#')[1] || '';
+        const previousHash = previousURL.split('#')[1] || '';
+        if (currentHash !== previousHash && currentURL.split('#')[0] === previousURL.split('#')[0]) {
+            console.log("アンカージャンプが検出されました。");
+            previousURL = currentURL; // URLを更新
+            return; // アンカージャンプの場合はupdatePromptListを実行しない
+        }
+
         console.log("URLが変更されました。サイドバーを再構築します。");
         updatePromptList();
+        previousURL = currentURL; // URLを更新
+        return true;
     });
 
     // Make the sidebar draggable
